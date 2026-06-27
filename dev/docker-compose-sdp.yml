@@ -1,15 +1,5 @@
 version: '3.8'
 services:
-  db:
-    image: postgres:14-alpine
-    environment:
-      POSTGRES_HOST_AUTH_METHOD: trust
-      POSTGRES_DB: ${DATABASE_NAME:-sdp_mtn}
-      PGDATA: /data/postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres-db:/data/postgres
   sdp-api:
     image: stellar/sdp-v2:development
     build:
@@ -102,7 +92,6 @@ services:
       - sh
       - -c
       - |
-        sleep 5
         ./stellar-disbursement-platform db admin migrate up
         ./stellar-disbursement-platform db tss migrate up
         ./stellar-disbursement-platform db auth migrate up --all
@@ -120,7 +109,3 @@ services:
     volumes:
       - ./env-config-demo-wallet.js:/usr/share/nginx/html/settings/env-config.js
 
-volumes:
-  postgres-db:
-    name: ${COMPOSE_PROJECT_NAME:-sdp}_postgres-db-${NETWORK_TYPE:-testnet}
-    driver: local
