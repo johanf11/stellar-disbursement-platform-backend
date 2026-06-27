@@ -1,0 +1,26 @@
+[Unit]
+Description=Stellar Disbursement Platform API
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/sdp
+EnvironmentFile=/opt/sdp/.env
+
+ExecStartPre=/opt/sdp/stellar-disbursement-platform db admin migrate up
+ExecStartPre=/opt/sdp/stellar-disbursement-platform db tss migrate up
+ExecStartPre=/opt/sdp/stellar-disbursement-platform db auth migrate up --all
+ExecStartPre=/opt/sdp/stellar-disbursement-platform db sdp migrate up --all
+ExecStartPre=/opt/sdp/stellar-disbursement-platform db setup-for-network --all
+ExecStart=/opt/sdp/stellar-disbursement-platform serve
+
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sdp-api
+
+[Install]
+WantedBy=multi-user.target

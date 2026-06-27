@@ -1,0 +1,23 @@
+[Unit]
+Description=Stellar Disbursement Platform TSS (Transaction Submission Service)
+After=network.target sdp-api.service
+Wants=network-online.target
+Requires=sdp-api.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/sdp
+EnvironmentFile=/opt/sdp/.env
+
+ExecStartPre=/opt/sdp/stellar-disbursement-platform channel-accounts ensure 3
+ExecStart=/opt/sdp/stellar-disbursement-platform tss
+
+Restart=on-failure
+RestartSec=10s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sdp-tss
+
+[Install]
+WantedBy=multi-user.target
