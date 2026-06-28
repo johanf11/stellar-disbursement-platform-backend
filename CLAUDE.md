@@ -110,3 +110,72 @@ Key env vars to know:
 Companion repo: `johanf11/stellar-disbursement-platform-frontend`
 Expected locally at: `../stellar-disbursement-platform-frontend` (relative to this repo)
 Runtime config (gitignored on frontend): `public/settings/env-config.js` → on server at `/opt/sdp-frontend/settings/env-config.js`
+
+---
+
+## Theo — Business Model
+
+This SDP fork is the disbursement backbone of **Theo**, a stablebond-backed payment and savings protocol for the US–Haiti corridor.
+
+### What Theo is
+
+Theo lets Haitian importers pay foreign suppliers instantly via an Odoo plugin ("Pay with Theo"), and lets international NGOs disburse to Haitian beneficiaries via the SDP dashboard. Both use **HTG-C**, a Haitian Gourde-denominated token backed entirely by a USD reserve held offshore.
+
+### The two tokens
+
+| Token | Peg | Purpose |
+|---|---|---|
+| **HTG-C** | 1 HTG-C = 1 HTG (display); backed by USD reserve | Local spending, NGO disbursements, importer settlement |
+| **THEO-USD** | 1:1 USD | Transmission token and dollar savings account (later phase) |
+
+### Legal structure
+
+- **Theo managed service** — operates the SDP (this repo), the Odoo plugin, and customer relationships.
+- **BVI SPV** — separate legal entity that issues HTG-C on Stellar and holds the reserve. This separation keeps the token issuance outside Haiti's BRH (central bank) controls.
+
+### The dollar sourcing problem and how it's solved
+
+The BRH tightly rations USD inside Haiti — Haitian banks cannot sell dollars freely at scale. Theo solves this by sourcing dollars **entirely outside Haiti**:
+
+- **International NGOs** wire USD to the BVI SPV (outside Haiti) to fund disbursements → SPV mints HTG-C → NGOs disburse via SDP to beneficiaries
+- **Haitian importers** pre-fund in HTG via local agents → credited with HTG-C → use Odoo plugin to pay foreign suppliers in USD drawn from the reserve
+
+NGOs and importers are opposite sides of a natural dollar netting book. The reserve never needs to touch the Haitian banking system.
+
+### Reserve composition (target)
+
+```
+50%  USTRY  — US Treasury bills, ~3.2% APY (Etherfuse, native Stellar)
+40%  CETES  — Mexican Treasury bills, ~9% APY (Etherfuse, native Stellar)
+10%  USDC   — Instant redemption buffer (Circle, native Stellar)
+
+Over-collateralization: 105% enforced at every state change
+```
+
+The 105% OC buffer covers HTG appreciation of up to ~4.8% — larger than Haiti's historical annual max.
+
+### Revenue streams
+
+| Stream | Mechanism |
+|---|---|
+| FX fees | 1.5% on every HTG-C conversion (in and out) |
+| Bond yield | USTRY (~3.2%) + CETES (~9%) on the float |
+| HTG depreciation gains | When HTG weakens, HTG-C liability falls in USD terms → surplus accrues |
+| AMM fees | CETES/USDC pool on Stellar DEX earns 30 bps per trade (later phase) |
+
+### Go-to-market sequencing
+
+1. **Phase 1 — Enterprise importers** (Odoo plugin, `THEO_ODOO_PLUGIN_SPEC.md`): Haitian importers pre-fund in HTG, pay foreign suppliers at 1.5% vs 4–7% bank rates. Anchor customer: NABATCO.
+2. **Phase 2 — International NGOs** (SDP dashboard): NGOs bring USD in, disburse HTG-C to beneficiaries. Dollar inflows fund the reserve.
+3. **Phase 3 — Consumer remittance** (deferred): Diaspora USD → HTG-C to family. Slots into an already-proven netting book.
+
+### How this repo fits
+
+The SDP (`sdp-api` + `sdp-tss`) is the **disbursement layer** — it handles bulk sends of HTG-C to recipient wallets (NGO beneficiaries, importer payment confirmations). The BVI SPV and Soroban vault contract handle minting/burning and reserve management separately.
+
+### Key specs
+
+- `THEO_SPEC.md` — Soroban vault contract spec (mint/burn, 105% OC invariant, accounting model)
+- `THEO_ODOO_PLUGIN_SPEC.md` — Odoo 17 plugin spec ("Pay with Theo" button, FX wizard, mock API)
+- `THEO_PRODUCT_SUMMARY.md` — full product brief with unit economics
+- `THEO_ODOO_PR_FAQ.md` — press release and stakeholder FAQ
