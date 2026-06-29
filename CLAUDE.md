@@ -1,5 +1,66 @@
 # CLAUDE.md — Stellar Disbursement Platform Backend
 
+## HTGC Account Setup & Minting Flow
+
+### Key accounts
+
+| Account | Public Key | Role |
+|---|---|---|
+| **Issuer** | `GDSRYZWTLQLBECKCL4TV7ZRGBZGBMSPD4V47B7Y7JSQVDJRSEXQTFCQT` | Mints HTGC, authorizes trustlines. Keep cold. |
+| **Distributor** | `GCP6VMZS3SJ4CSOT3ZVMMJIOXOHTMJK47YQ4RTUJN7P2KYKDVRCUBS2X` | Holds pre-minted float, sends day-to-day payments. Used by SDP/TSS. |
+
+The issuer has `AUTH_REVOCABLE` and `CLAWBACK_ENABLED` flags set. `AUTH_REQUIRED` was removed — trustlines auto-authorize, so payments flow immediately after the recipient creates a trustline. The issuer retains freeze and clawback rights.
+
+### One-time setup: fund the distributor
+
+1. **Distributor creates trustline** — sign with distributor key:
+   - Operation: `Change Trust`
+   - Asset: `HTGC` / issuer `GDSRYZWTLQLBECKCL4TV7ZRGBZGBMSPD4V47B7Y7JSQVDJRSEXQTFCQT`
+2. **Issuer authorizes distributor trustline** — sign with issuer key:
+   - Operation: `Set Trust Line Flags`
+   - Trustor: `GCP6V...UBS2X`, Asset: `HTGC`, Set flags: `Authorized`
+3. **Issuer mints to distributor** — sign with issuer key:
+   - Operation: `Payment`
+   - Destination: `GCP6V...UBS2X`, Asset: `HTGC`, Amount: large float (e.g. 10,000,000)
+
+Repeat step 3 whenever the distributor float needs topping up.
+
+### Per-recipient setup (every new user)
+
+These steps must happen in order before a user can receive HTGC:
+
+**Step 1 — Recipient creates trustline** (signed by recipient)
+- Operation: `Change Trust`
+- Asset: `HTGC` / issuer `GDSRYZWTLQLBECKCL4TV7ZRGBZGBMSPD4V47B7Y7JSQVDJRSEXQTFCQT`
+- The recipient needs XLM for the base reserve (0.5 XLM per trustline)
+
+**Step 2 — Distributor sends payment** (signed by distributor key)
+- Operation: `Payment`
+- Source: `GCP6V...UBS2X`
+- Destination: `<recipient address>`
+- Asset: `HTGC` / `GDSRY...FCQT`
+- Amount: disbursement amount
+
+### Correct flow diagram
+
+```
+Issuer mints → Distributor        (one-time or periodic top-up)
+Issuer authorizes → Recipient     (per new user, before first payment)
+Distributor pays → Recipient      (every disbursement)
+```
+
+### Common errors
+
+| Error | Cause | Fix |
+|---|---|---|
+| `op_malformed` on change_trust | Issuer account not funded on testnet | Friendbot both accounts |
+| `op_not_authorized` on payment | Recipient trustline not authorized by issuer | Run Step 2 first |
+| `op_no_trust` on payment | Recipient has no trustline at all | Run Step 1 first |
+| `tx_bad_auth` | Signed with wrong secret key | Check which account is `source_account`, sign with its key |
+| `tx_failed` + 0 balance despite sent | Trustline is for a different HTGC issuer | Recipient must trust the correct issuer address |
+
+---
+
 ## What this repo is
 
 Fork of [stellar/stellar-disbursement-platform-backend](https://github.com/stellar/stellar-disbursement-platform-backend) (v6.6.1).

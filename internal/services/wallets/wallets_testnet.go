@@ -17,6 +17,27 @@ var TestnetWallets = []data.Wallet{
 		},
 	},
 	{
+		Name:              "Decaf",
+		Homepage:          "https://decaf.so",
+		DeepLinkSchema:    "https://decafwallet.app.link",
+		SEP10ClientDomain: "decaf.so",
+		Assets:            assets.AllAssetsTestnet,
+	},
+	{
+		Name:              "Vesseo",
+		Homepage:          "https://vesseoapp.com",
+		DeepLinkSchema:    "https://vesseoapp.com/disbursement",
+		SEP10ClientDomain: "vesseoapp.com",
+		Assets:            assets.AllAssetsTestnet,
+	},
+	{
+		Name:              "Via Wallet",
+		Homepage:          "https://www.solvewithvia.com/wallet/",
+		DeepLinkSchema:    "https://www.solvewithvia.com/wallet/",
+		SEP10ClientDomain: "solvewithvia.com",
+		Assets:            assets.AllAssetsTestnet,
+	},
+	{
 		Name:        "User Managed Wallet",
 		Assets:      assets.AllAssetsTestnet,
 		UserManaged: true,

@@ -5,6 +5,7 @@ import "github.com/stellar/stellar-disbursement-platform-backend/internal/data"
 var AllAssetsTestnet = []data.Asset{
 	XLMAsset,
 	USDCAssetTestnet,
+	HTGCAssetTestnet, // TODO: replace with mainnet issuer on launch (see HTGCAssetIssuerTestnet below)
 }
 
 // USDC
@@ -14,6 +15,14 @@ const USDCAssetIssuerTestnet = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH
 var USDCAssetTestnet = data.Asset{
 	Code:   USDCAssetCode,
 	Issuer: USDCAssetIssuerTestnet,
+}
+
+// HTGC — Theo Haitian Gourde Coin (testnet demo issuer; replace with BVI SPV issuer on mainnet launch)
+const HTGCAssetIssuerTestnet = "GDSRYZWTLQLBECKCL4TV7ZRGBZGBMSPD4V47B7Y7JSQVDJRSEXQTFCQT"
+
+var HTGCAssetTestnet = data.Asset{
+	Code:   "HTGC",
+	Issuer: HTGCAssetIssuerTestnet,
 }
 
 // EURC
