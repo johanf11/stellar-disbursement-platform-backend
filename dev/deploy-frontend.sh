@@ -9,8 +9,8 @@ set -euo pipefail
 DROPLET_IP="64.225.19.99"
 REMOTE_USER="root"
 SSH_KEY="${HOME}/.ssh/id_do_sdp"
-FRONTEND_DIR="$(dirname "$(realpath "$0")")/../../../stellar-disbursement-platform-frontend"
-YARN="$(npm root -g)/yarn/bin/yarn"
+FRONTEND_DIR="$(realpath "$(dirname "$(realpath "$0")")/../../sdp-frontend-theo-demo")"
+export PATH="${HOME}/.npm-global/bin:/usr/local/bin:$PATH"
 
 if [ ! -d "$FRONTEND_DIR" ]; then
   echo "ERROR: Frontend repo not found at $FRONTEND_DIR"
@@ -19,7 +19,7 @@ fi
 
 echo "==> Building frontend..."
 cd "$FRONTEND_DIR"
-"$YARN" build
+npm run build
 
 echo "==> Uploading build to droplet..."
 ssh -i "$SSH_KEY" -o IdentitiesOnly=yes "${REMOTE_USER}@${DROPLET_IP}" "mkdir -p /opt/sdp-frontend"
