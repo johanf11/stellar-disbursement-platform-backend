@@ -949,6 +949,30 @@ func Test_ReceiverWallet_GetAllPendingRegistration(t *testing.T) {
 		assert.Len(t, rws, 2)
 		assert.ElementsMatch(t, rws, expectedRWs)
 	})
+
+	t.Run("includes receiver wallets with only direct payments (no disbursement)", func(t *testing.T) {
+		DeleteAllPaymentsFixtures(t, ctx, dbConnectionPool)
+		DeleteAllReceiverWalletsFixtures(t, ctx, dbConnectionPool)
+
+		// rw5: READY with a direct payment (no disbursement) — must be included
+		rw5 := CreateReceiverWalletFixture(t, ctx, dbConnectionPool, receiver.ID, wallet1.ID, ReadyReceiversWalletStatus)
+		_ = CreatePaymentFixture(t, ctx, dbConnectionPool, models.Payment, &Payment{
+			Amount:         "50",
+			Status:         ReadyPaymentStatus,
+			Type:           PaymentTypeDirect,
+			Asset:          *asset,
+			ReceiverWallet: rw5,
+		})
+
+		// rw6: READY with no payments at all — must NOT be included
+		_ = CreateReceiverWalletFixture(t, ctx, dbConnectionPool, receiver.ID, wallet2.ID, ReadyReceiversWalletStatus)
+
+		rws, err := models.ReceiverWallet.GetAllPendingRegistrations(ctx, dbConnectionPool)
+		require.NoError(t, err)
+
+		require.Len(t, rws, 1)
+		assert.Equal(t, rw5.ID, rws[0].ID)
+	})
 }
 
 func Test_ReceiverWallet_GetAllPendingRegistrationByReceiverWalletIDs(t *testing.T) {

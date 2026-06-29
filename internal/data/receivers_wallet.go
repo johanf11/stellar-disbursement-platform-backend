@@ -326,7 +326,38 @@ func (rw *ReceiverWalletModel) GetBySEP24TransactionIDAndAccount(ctx context.Con
 	return &receiverWallet, nil
 }
 
+// getPendingRegistrationReceiverWalletsBaseQuery finds READY receiver wallets that have at least one
+// payment (disbursement or direct) associated with them. The %s placeholder is an optional extra
+// WHERE clause appended at the end (e.g. "AND rw.id = ANY($2)").
 const getPendingRegistrationReceiverWalletsBaseQuery = `
+	SELECT
+		rw.id,
+		rw.invitation_sent_at,
+		r.id AS "receiver.id",
+		COALESCE(r.phone_number, '') as "receiver.phone_number",
+		COALESCE(r.email, '') as "receiver.email",
+		w.id AS "wallet.id",
+		w.name AS "wallet.name"
+	FROM
+		receiver_wallets rw
+		INNER JOIN receivers r ON r.id = rw.receiver_id
+		INNER JOIN wallets w ON w.id = rw.wallet_id
+	WHERE
+		rw.status = $1 -- 'READY'::receiver_wallet_status
+		AND EXISTS (
+			SELECT 1 FROM payments p
+			WHERE p.receiver_wallet_id = rw.id
+		)
+		%s
+	GROUP BY
+		rw.id,
+		r.id,
+		w.id
+`
+
+// getPendingRegistrationByDisbursementQuery is the disbursement-scoped variant: it keeps the
+// explicit disbursement join so the caller can filter by d.id.
+const getPendingRegistrationByDisbursementQuery = `
 	SELECT
 		rw.id,
 		rw.invitation_sent_at,
@@ -343,7 +374,7 @@ const getPendingRegistrationReceiverWalletsBaseQuery = `
 		INNER JOIN payments p ON d.id = p.disbursement_id AND p.receiver_id = r.id
 	WHERE
 		rw.status = $1 -- 'READY'::receiver_wallet_status
-		%s
+		AND d.id = $2
 	GROUP BY
 		rw.id,
 		r.id,
@@ -378,11 +409,9 @@ func (rw *ReceiverWalletModel) GetAllPendingRegistrationByReceiverWalletIDs(ctx 
 }
 
 func (rw *ReceiverWalletModel) GetAllPendingRegistrationByDisbursementID(ctx context.Context, sqlExec db.SQLExecuter, disbursementID string) ([]*ReceiverWallet, error) {
-	query := fmt.Sprintf(getPendingRegistrationReceiverWalletsBaseQuery, "AND d.id = $2")
-
 	receiverWallets := make([]*ReceiverWallet, 0)
-	args := append(getPendingRegistrationReceiverWalletsBaseArgs, disbursementID)
-	err := sqlExec.SelectContext(ctx, &receiverWallets, query, args...)
+	args := []any{ReadyReceiversWalletStatus, disbursementID}
+	err := sqlExec.SelectContext(ctx, &receiverWallets, getPendingRegistrationByDisbursementQuery, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error querying pending registration receiver wallets for disbursement ID %s: %w", disbursementID, err)
 	}
